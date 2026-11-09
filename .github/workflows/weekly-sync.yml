@@ -1,0 +1,51 @@
+name: Weekly upstream sync
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"   # every Monday, 05:00 UTC
+  workflow_dispatch:       # allow a manual run
+
+permissions:
+  contents: write          # push commits and tags to main
+  
+concurrency:
+  group: weekly-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Check out upstream sqlite/sqlite into original/
+        run: git clone https://github.com/sqlite/sqlite original/sqlite
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake tclsh
+
+      - name: Install arduino-cli and cores
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sudo sh -s -- -b /usr/local/bin
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32 rp2040:rp2040 STMicroelectronics:stm32
+
+      - name: Weekly update (release new upstream version, sync main)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 tools/weekly_update.py

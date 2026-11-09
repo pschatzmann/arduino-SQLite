@@ -16,9 +16,10 @@ On boards with PSRAM, SQLite's dynamic memory can be placed in external RAM with
 
 ## Documentation
 
+- [Wiki](https://github.com/pschatzmann/arduino-SQLite/wiki): guides and chapters
 - [SQLite documentation](https://sqlite.org/docs.html) 
 - [C/C++ interface](https://sqlite.org/c3ref/intro.html)
-- [Prebuilt databases: build on the desktop, ship on flash](docs/PrebuiltDatabase.md)
+- [Prebuilt databases: build on the desktop, ship on flash](https://github.com/pschatzmann/arduino-SQLite/wiki/Prebuilt-Databases)
 - [File Systems](https://arduino-pico.readthedocs.io/en/latest/fs.html): how the Arduino cores mount LittleFS, SD and other file systems. Use this to pick the path for a database.
 - [Examples](examples)
 
@@ -35,4 +36,3 @@ git clone https://github.com/pschatzmann/arduino-SQLite.git
 
 The TinyFATFS backend needs the [TinyFATFS](https://github.com/pschatzmann/TinyFATFS) library. Install it only if you use `SQLiteTinyFATFS.h`.
 
-To rebuild the SQLite sources from a new upstream release, see `tools/migrate_upstream.py`.
