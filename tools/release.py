@@ -12,13 +12,13 @@ Steps:
      the upstream tags.
   2. Set the version on original/: check out the upstream tag version-<VERSION>.
   3. Run the migration (tools/migrate_upstream.py --regenerate) and verify the
-     build: host tests (CMake/CTest) and arduino-cli compiles for ESP32, RP2040,
-     RP2350 with PSRAM and STM32. Any failure stops the release.
+     build: host tests (CMake/CTest) and an arduino-cli compile of BasicUsage
+     for the Raspberry Pi Pico (rp2040:rp2040:rpipico). Any failure stops the release.
   4. (--publish only) Commit the migrated sources on main, tag v<VERSION>, push
      main and the tag, and create the GitHub release with generated notes (gh CLI).
   5. (--publish only) Set main to track origin/main and pull the latest changes.
 
-Requirements: git, cmake, arduino-cli with the cores listed in BOARDS, and
+Requirements: git, cmake, arduino-cli with the rp2040 core, and
 gh (authenticated) for step 4. Python standard library only.
 """
 
@@ -37,15 +37,13 @@ BUILD_DIR = LIB_ROOT / "build" / "release-host"
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 MAIN_BRANCH = "main"  # releases are always cut from and pushed to this branch
 
-# Boards that must compile the BasicUsage example.
+# Boards that must compile the BasicUsage example: Raspberry Pi Pico only.
 BOARDS = [
-    "esp32:esp32:esp32s3",
     "rp2040:rp2040:rpipico",
-    "rp2040:rp2040:generic_rp2350:psramcs=GPIO0",  # RP2350 with PSRAM
-    "STMicroelectronics:stm32:Nucleo_64:pnum=NUCLEO_F401RE",
 ]
-# PrebuiltDatabase uses LittleFS through the stdio backend: ESP32 only.
-PREBUILT_BOARDS = ["esp32:esp32:esp32s3"]
+# PrebuiltDatabase uses LittleFS through the stdio backend (ESP32 only), so it
+# is not verified on the Pico.
+PREBUILT_BOARDS: list[str] = []
 
 
 class ReleaseError(RuntimeError):

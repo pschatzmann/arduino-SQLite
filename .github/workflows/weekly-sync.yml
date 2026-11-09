@@ -36,11 +36,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake tclsh
 
-      - name: Install arduino-cli and cores
+      - name: Set up arduino-cli
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install the Raspberry Pi Pico core
         run: |
-          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sudo sh -s -- -b /usr/local/bin
           arduino-cli core update-index
-          arduino-cli core install esp32:esp32 rp2040:rp2040 STMicroelectronics:stm32
+          arduino-cli core install rp2040:rp2040
 
       - name: Weekly update (release new upstream version, sync main)
         env:
