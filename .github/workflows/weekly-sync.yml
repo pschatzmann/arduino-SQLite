@@ -38,6 +38,11 @@ jobs:
 
       - name: Set up arduino-cli
         uses: arduino/setup-arduino-cli@v2
+        with:
+          # The Raspberry Pi Pico core (rp2040:rp2040) is published by the
+          # arduino-pico project, not in the default Arduino index.
+          config-options: |
+            board_manager.additional_urls=https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
 
       - name: Install the Raspberry Pi Pico core
         run: |
