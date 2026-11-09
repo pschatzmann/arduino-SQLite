@@ -146,12 +146,12 @@ extern "C" {
 ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
 ** [sqlite_version()] and [sqlite_source_id()].
 */
-#define SQLITE_VERSION        "3.54.1"
-#define SQLITE_VERSION_NUMBER 3054001
-#define SQLITE_SOURCE_ID      "2026-10-16 14:45:20 555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76"
-#define SQLITE_SCM_BRANCH     "branch-3.54"
-#define SQLITE_SCM_TAGS       "release version-3.54.1"
-#define SQLITE_SCM_DATETIME   "2026-10-16T14:45:20.546Z"
+#define SQLITE_VERSION        "3.55.0"
+#define SQLITE_VERSION_NUMBER 3055000
+#define SQLITE_SOURCE_ID      "2026-11-09 00:59:11 1fea2d9c18fc5f84b1c98a3aa95895a67851a3fbc901144e7ebba05408e2eb47"
+#define SQLITE_SCM_BRANCH     "trunk"
+#define SQLITE_SCM_TAGS       ""
+#define SQLITE_SCM_DATETIME   "2026-11-09T00:59:11.143Z"
 
 /*
 ** CAPI3REF: Run-Time Library Version Numbers
@@ -2664,12 +2664,19 @@ struct sqlite3_mem_methods {
 ** default value 17, as of SQLite version 3.52.0.  The value was 15 in all
 ** prior versions.<p>
 ** This option takes two arguments which are an integer and a pointer
-** to an integer.  The first argument is a small integer, between 3 and 23, or
+** to an integer.  The first argument is a small integer, between 4 and 23, or
 ** zero.  The FP_DIGITS setting is changed to that small integer, or left
 ** unaltered if the first argument is zero or out of range. The second argument
 ** is a pointer to an integer.  If the pointer is not NULL, then the value of
 ** the FP_DIGITS setting, after possibly being modified by the first
 ** arguments, is written into the integer to which the second argument points.
+**
+** [[SQLITE_DBCONFIG_VDBE_TRACE]]
+** <dt>SQLITE_DBCONFIG_VDBE_TRACE</dt>
+** <dd>The SQLITE_DBCONFIG_VDBE_TRACE setting enables or disables tracing
+** of the [bytecode engine].  This setting is only available when SQLite has
+** be compiled with -DSQLITE_DEBUG.  It is the equivalent of using
+** [PRAGMA vdbe_trace].
 ** </dd>
 **
 ** </dl>
@@ -2720,7 +2727,8 @@ struct sqlite3_mem_methods {
 #define SQLITE_DBCONFIG_ENABLE_ATTACH_WRITE   1021 /* int int* */
 #define SQLITE_DBCONFIG_ENABLE_COMMENTS       1022 /* int int* */
 #define SQLITE_DBCONFIG_FP_DIGITS             1023 /* int int* */
-#define SQLITE_DBCONFIG_MAX                   1023 /* Largest DBCONFIG */
+#define SQLITE_DBCONFIG_VDBE_TRACE            1024 /* int int* */
+#define SQLITE_DBCONFIG_MAX                   1024 /* Largest DBCONFIG */
 
 /*
 ** CAPI3REF: Enable Or Disable Extended Result Codes
@@ -4449,6 +4457,15 @@ SQLITE_API int sqlite3_limit(sqlite3*, int id, int newVal);
 ** [[SQLITE_LIMIT_TRIGGER_STEPS]] ^(<dt>SQLITE_LIMIT_TRIGGER_STEPS</dt>
 ** <dd>The maximum number of SQL statements that can be contained within
 ** a single trigger.</dd>)^
+**
+** [[SQLITE_LIMIT_CTES]] ^(<dt>SQLITE_LIMIT_CTES</dt>
+** <dd>The maximum number of [common table expressions] (CTEs) allowed
+** in a single SQL statements.  This limit is used to limit possible
+** exponential growth in the number of required cursors required for
+** nested joins of CTEs.  The limit is an absolute upper bound, and
+** SQLite may refuse to compile a statement if the number of CTEs simply
+** approaches this limit.  Set this limit to 0 to disable the restriction.
+** </dd>)^
 ** </dl>
 */
 #define SQLITE_LIMIT_LENGTH                    0
@@ -4466,6 +4483,7 @@ SQLITE_API int sqlite3_limit(sqlite3*, int id, int newVal);
 #define SQLITE_LIMIT_PARSER_DEPTH             12
 #define SQLITE_LIMIT_SCHEMA                   13
 #define SQLITE_LIMIT_TRIGGER_STEPS            14
+#define SQLITE_LIMIT_CTES                     15
 
 /*
 ** CAPI3REF: Prepare Flags
@@ -4991,7 +5009,7 @@ typedef struct sqlite3_context sqlite3_context;
 ** ^ (1) A destructor to dispose of the BLOB or string after SQLite has finished
 ** with it may be passed. ^It is called to dispose of the BLOB or string even
 ** if the call to the bind API fails, except the destructor is not called if
-** the third parameter is a NULL pointer or the fourth parameter is negative.
+** the third parameter is a NULL pointer or the fifth parameter is negative.
 ** ^ (2) The special constant, [SQLITE_STATIC], may be passed to indicate that
 ** the application remains responsible for disposing of the object. ^In this
 ** case, the object and the provided pointer to it must remain valid until
@@ -5877,6 +5895,10 @@ SQLITE_API int sqlite3_create_window_function(
 **
 ** These constants define integer codes that represent the various
 ** text encodings supported by SQLite.
+**
+** If any value other than the ones defined here are passed into the
+** "encoding" argument of an API function, then the results are
+** unspecified and subject to change.
 **
 ** <dl>
 ** [[SQLITE_UTF8]] <dt>SQLITE_UTF8</dt><dd>Text is encoding as UTF-8</dd>
@@ -6860,6 +6882,10 @@ SQLITE_API void sqlite3_activate_cerod(
 ** at all. ^In SQLite version 3.42.0 and later, a negative
 ** argument passed into sqlite3_sleep() is changed to zero before it is relayed
 ** down into the xSleep method of the VFS.
+**
+** The maximum sleep time is 2147483 milliseconds (about 35 minutes and
+** 47 seconds).  If the argument to sqlite3_sleep() is greater than 2147483,
+** the sleep time is capped at 2147483 milliseconds.
 */
 SQLITE_API int sqlite3_sleep(int);
 
@@ -8775,7 +8801,8 @@ SQLITE_API int sqlite3_test_control(int op, ...);
 #define SQLITE_TESTCTRL_LOGEST                  33
 #define SQLITE_TESTCTRL_USELONGDOUBLE           34  /* NOT USED */
 #define SQLITE_TESTCTRL_ATOF                    34
-#define SQLITE_TESTCTRL_LAST                    34  /* Largest TESTCTRL */
+#define SQLITE_TESTCTRL_EXPIRE_STMTS            35
+#define SQLITE_TESTCTRL_LAST                    35  /* Largest TESTCTRL */
 
 /*
 ** CAPI3REF: SQL Keyword Checking
@@ -11254,7 +11281,7 @@ SQLITE_API int sqlite3_snapshot_recover(sqlite3 *db, const char *zDb);
 **
 ** A call to sqlite3_serialize(D,S,P,F) might return NULL even if the
 ** SQLITE_SERIALIZE_NOCOPY bit is omitted from argument F if a memory
-** allocation error occurs.
+** allocation or I/O error occurs.
 **
 ** This interface is omitted if SQLite is compiled with the
 ** [SQLITE_OMIT_DESERIALIZE] option.
