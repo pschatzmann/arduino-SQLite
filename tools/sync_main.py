@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """Synchronize the main branch with origin and with an upstream SQLite release.
 
+    python3 tools/sync_main.py main                    # migrate upstream's development branch
     python3 tools/sync_main.py 3.54.1                  # sync and show the changes
     python3 tools/sync_main.py 3.54.1 --commit         # also commit the migrated sources
     python3 tools/sync_main.py 3.54.1 --commit --push  # also push main to origin
 
 Steps:
   1. Switch to main and fast-forward it from origin/main.
-  2. Fetch the upstream tags (original/sqlite) and check out version-<VERSION>.
-  3. Run tools/migrate_upstream.py --tag version-<VERSION> --regenerate.
+  2. Fetch upstream (original/sqlite) and check out either the release tag
+     version-<VERSION>, or, when VERSION is "main", the upstream default branch
+     (origin/master, the development head).
+  3. Run tools/migrate_upstream.py --regenerate (the version comes from the
+     upstream sqlite3.h).
   4. Show the resulting changes; with --commit, commit them on main; with
      --push, push main to origin.
 
@@ -29,7 +33,8 @@ LIB_ROOT = Path(__file__).resolve().parent.parent
 UPSTREAM = LIB_ROOT / "original" / "sqlite"
 MAIN_BRANCH = "main"
 MIGRATED_PATHS = ["src", "library.properties"]
-VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+VERSION_RE = re.compile(r"^(\d+\.\d+\.\d+|main)$")
+UPSTREAM_HEAD = "main"  # upstream development head: origin/<default branch>
 
 
 class SyncError(RuntimeError):
@@ -71,18 +76,33 @@ def check_clean_tree() -> None:
 
 
 def checkout_upstream(version: str) -> str:
-    step(f"2. Fetch upstream tags and check out version-{version}")
-    tag = f"version-{version}"
+    """Checks out the requested upstream state and returns a label for it."""
     run(["git", "fetch", "--tags", "origin"], cwd=UPSTREAM)
+    if version == UPSTREAM_HEAD:
+        step("2. Check out the upstream development branch")
+        default = run(["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd=UPSTREAM).stdout.strip()
+        if not default:
+            raise SyncError("cannot determine upstream default branch (origin/HEAD)")
+        run(["git", "checkout", "--detach", "--quiet", default], cwd=UPSTREAM)
+        sha = run(["git", "rev-parse", "--short", "HEAD"], cwd=UPSTREAM).stdout.strip()
+        return f"{default.split('/', 1)[-1]}@{sha}"
+    step(f"2. Check out upstream release version-{version}")
+    tag = f"version-{version}"
     if run(["git", "rev-parse", "--verify", f"refs/tags/{tag}"], cwd=UPSTREAM, check=False).returncode != 0:
         raise SyncError(f"upstream tag {tag} does not exist in {UPSTREAM}")
     run(["git", "checkout", "--detach", "--quiet", tag], cwd=UPSTREAM)
     return tag
 
 
-def migrate(tag: str) -> None:
-    step("3. Migrate the library to the upstream release")
-    run([sys.executable, "tools/migrate_upstream.py", "--tag", tag, "--regenerate"])
+def migrate() -> str:
+    """Runs the migration on the checked-out upstream tree; returns the SQLite version."""
+    step("3. Migrate the library to the checked-out upstream sources")
+    run([sys.executable, "tools/migrate_upstream.py", "--regenerate"])
+    header = (LIB_ROOT / "src" / "sqlite3.h").read_text(encoding="utf-8", errors="replace")
+    match = re.search(r'#define\s+SQLITE_VERSION\s+"([0-9.]+)"', header)
+    if not match:
+        raise SyncError("cannot read SQLITE_VERSION from src/sqlite3.h")
+    return match.group(1)
 
 
 def show_changes() -> bool:
@@ -95,10 +115,10 @@ def show_changes() -> bool:
     return True
 
 
-def commit_and_push(version: str, tag: str, push: bool) -> None:
+def commit_and_push(version: str, label: str, push: bool) -> None:
     step("5. Commit and push")
     run(["git", "add", "--", *MIGRATED_PATHS])
-    message = (f"Migrate to SQLite {version} (upstream {tag})\n\n"
+    message = (f"Migrate to SQLite {version} (upstream {label})\n\n"
                "Co-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>")
     run(["git", "commit", "-m", message])
     if push:
@@ -109,23 +129,24 @@ def commit_and_push(version: str, tag: str, push: bool) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("version", help="upstream SQLite version, e.g. 3.54.1")
+    parser.add_argument("version", help="upstream SQLite release, e.g. 3.54.1, or 'main' for the development branch")
     parser.add_argument("--commit", action="store_true", help="commit the migrated sources on main")
     parser.add_argument("--push", action="store_true", help="push main to origin (implies --commit)")
     args = parser.parse_args()
 
     if not VERSION_RE.match(args.version):
-        parser.error(f"version must look like 3.54.1, got {args.version!r}")
+        parser.error(f"version must look like 3.54.1 or be 'main', got {args.version!r}")
     commit = args.commit or args.push
 
     try:
         sync_main_from_origin()
         check_clean_tree()
-        tag = checkout_upstream(args.version)
-        migrate(tag)
+        label = checkout_upstream(args.version)
+        version = migrate()
+        print(f"    upstream: {label} (SQLite {version})")
         changed = show_changes()
         if changed and commit:
-            commit_and_push(args.version, tag, args.push)
+            commit_and_push(version, label, args.push)
         elif changed:
             print("\nNot committed. Re-run with --commit to commit, or --push to commit and push.")
     except SyncError as err:
