@@ -55,16 +55,29 @@
 #define SQLITE_DEFAULT_FOREIGN_KEYS     1
 #define SQLITE_TEMP_STORE               3   /* temp data always in memory     */
 #define SQLITE_DEFAULT_MEMSTATUS        0   /* skip global memory accounting  */
-#define SQLITE_DEFAULT_CACHE_SIZE       (-256)  /* page cache: 256 KiB        */
+#define SQLITE_DEFAULT_CACHE_SIZE       (-32)   /* page cache: 32 KiB; raise with PRAGMA cache_size */
 #define SQLITE_DEFAULT_PCACHE_INITSZ    8
 #define SQLITE_DEFAULT_LOOKASIDE        0,0 /* no lookaside allocator         */
 #define SQLITE_SMALL_STACK              1
-#define SQLITE_MAX_EXPR_DEPTH           100
 
-/* --- rarely needed code, removed to save flash ----------------------------- */
+/* --- code the library never uses, removed to save flash ------------------- */
 #define SQLITE_OMIT_PROGRESS_CALLBACK   1
 #define SQLITE_OMIT_TRACE               1
 #define SQLITE_OMIT_COMPILEOPTION_DIAGS 1
+#define SQLITE_OMIT_EXPLAIN             1   /* EXPLAIN output is for debugging */
+#define SQLITE_OMIT_INTEGRITY_CHECK     1   /* run integrity_check on the desktop */
+#define SQLITE_OMIT_LOOKASIDE           1   /* lookaside is disabled anyway */
+#define SQLITE_OMIT_XFER_OPT            1   /* INSERT ... SELECT transfer shortcut */
+
+/* --- limits: bound the memory a single statement or value can take ---------
+ * The defaults (1 GB strings, 2000 columns, 1000-deep expressions) allow queries
+ * that would exhaust a microcontroller's RAM. Raise them if your data needs it. */
+#define SQLITE_MAX_LENGTH               262144  /* 256 KiB per string or blob */
+#define SQLITE_MAX_SQL_LENGTH           8192    /* SQL text per statement */
+#define SQLITE_MAX_COLUMN               64      /* columns per table / result */
+#define SQLITE_MAX_EXPR_DEPTH           64      /* parser recursion depth */
+#define SQLITE_MAX_VARIABLE_NUMBER      99      /* ? parameters per statement */
+#define SQLITE_MAX_COMPOUND_SELECT      16      /* UNION chain length */
 
 /* --- extensions ------------------------------------------------------------
  * Loadable extensions are not available (SQLITE_OMIT_LOAD_EXTENSION), so
