@@ -1,0 +1,11 @@
+# Upstream sqlite/sqlite checkout used for migration (contains its own .git)
+original/
+
+# Build output (CMake host tests, arduino-cli)
+build/
+
+# Temporary databases and journals created by tests and tools
+*.db-journal
+*-wal
+*-shm
+tests/host/*.db
