@@ -36,3 +36,7 @@ git clone https://github.com/pschatzmann/arduino-SQLite.git
 
 The TinyFATFS backend needs the [TinyFATFS](https://github.com/pschatzmann/TinyFATFS) library. Install it only if you use `SQLiteTinyFATFS.h`.
 
+## License
+
+- **SQLite** (`src/sqlite3.c`, `src/sqlite3.h`, `src/sqlite3ext.h`): public domain. See [LICENSE-SQLITE.md](LICENSE-SQLITE.md) and <https://sqlite.org/copyright.html>.
+- **Arduino wrapper, VFS, tools, workflows and examples** (`src/SQLite.*`, `src/sqlite_*`, `src/SQLiteFS.h`, `src/SQLiteTinyFATFS.h`, `tools/`, `examples/`): MIT License. See [LICENSE](LICENSE).

@@ -9,7 +9,8 @@ What it does:
      ./configure and make if it is missing or --regenerate is given.
   3. Writes src/sqlite3.c as: the Arduino config header (src/sqlite3_config.h)
      followed by the unmodified upstream amalgamation.
-  4. Copies sqlite3.h and sqlite3ext.h into src/.
+  4. Copies sqlite3.h and sqlite3ext.h into src/, and the upstream LICENSE.md
+     to LICENSE-SQLITE.md.
   5. Updates version= in library.properties to the upstream version.
   6. Verifies the result: versions agree and the config header is first.
 
@@ -91,6 +92,8 @@ def write_library(upstream: Path, version: str) -> None:
     )
     for name in ("sqlite3.h", "sqlite3ext.h"):
         shutil.copyfile(upstream / name, src / name)
+    # Keep the upstream license text next to the library, updated with each migration.
+    shutil.copyfile(upstream / "LICENSE.md", LIB_ROOT / "LICENSE-SQLITE.md")
     print(f"library: wrote src/sqlite3.c, src/sqlite3.h, src/sqlite3ext.h ({version})")
 
 
