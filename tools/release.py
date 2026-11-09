@@ -8,14 +8,15 @@ The version is the upstream SQLite release (https://github.com/sqlite/sqlite),
 so it must exist as the tag version-<VERSION> in original/sqlite.
 
 Steps:
-  1. Get the latest code: pull the library repository (fast-forward only) and
-     fetch the upstream tags.
+  1. Get the latest code: switch to main, pull it (fast-forward only) and fetch
+     the upstream tags.
   2. Set the version on original/: check out the upstream tag version-<VERSION>.
   3. Run the migration (tools/migrate_upstream.py --regenerate) and verify the
      build: host tests (CMake/CTest) and arduino-cli compiles for ESP32, RP2040,
      RP2350 with PSRAM and STM32. Any failure stops the release.
-  4. (--publish only) Commit the migrated sources, tag v<VERSION>, push, and
-     create the GitHub release with generated notes (gh CLI).
+  4. (--publish only) Commit the migrated sources on main, tag v<VERSION>, push
+     main and the tag, and create the GitHub release with generated notes (gh CLI).
+  5. (--publish only) Set main to track origin/main and pull the latest changes.
 
 Requirements: git, cmake, arduino-cli with the cores listed in BOARDS, and
 gh (authenticated) for step 4. Python standard library only.
@@ -34,6 +35,7 @@ LIB_ROOT = Path(__file__).resolve().parent.parent
 UPSTREAM = LIB_ROOT / "original" / "sqlite"
 BUILD_DIR = LIB_ROOT / "build" / "release-host"
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+MAIN_BRANCH = "main"  # releases are always cut from and pushed to this branch
 
 # Boards that must compile the BasicUsage example.
 BOARDS = [
@@ -86,7 +88,11 @@ def get_latest_code(publish: bool) -> None:
             raise ReleaseError("working tree has uncommitted changes; commit or stash them first:\n" + dirty)
         if run(["git", "remote"]).stdout.strip():
             run(["git", "fetch", "origin"])
-            run(["git", "pull", "--ff-only"])
+            current = run(["git", "branch", "--show-current"]).stdout.strip()
+            if current != MAIN_BRANCH:
+                print(f"    switching from {current or 'detached HEAD'} to {MAIN_BRANCH}")
+                run(["git", "checkout", MAIN_BRANCH])
+            run(["git", "pull", "--ff-only", "origin", MAIN_BRANCH])
         else:
             print("    no git remote configured: skipping pull")
     else:
@@ -143,8 +149,11 @@ def verify_arduino_builds() -> None:
 # --- step 4 ----------------------------------------------------------------
 
 def publish(version: str, tag: str) -> None:
-    step(f"4. Commit, tag and publish v{version}")
+    step(f"4. Commit, tag and publish v{version} from {MAIN_BRANCH}")
     release_tag = f"v{version}"
+    current = run(["git", "branch", "--show-current"]).stdout.strip()
+    if current != MAIN_BRANCH:
+        raise ReleaseError(f"must publish from branch {MAIN_BRANCH}, currently on {current or 'detached HEAD'}")
     if run(["git", "rev-parse", "--verify", f"refs/tags/{release_tag}"], check=False).returncode == 0:
         raise ReleaseError(f"tag {release_tag} already exists")
 
@@ -155,13 +164,27 @@ def publish(version: str, tag: str) -> None:
         print("    nothing to commit")
 
     run(["git", "tag", "-a", release_tag, "-m", f"SQLite Arduino library {version} (upstream {tag})"])
-    run(["git", "push", "origin", "HEAD"])
+    run(["git", "push", "origin", MAIN_BRANCH])
     run(["git", "push", "origin", release_tag])
     run(["gh", "release", "create", release_tag,
          "--title", f"SQLite {version} for Arduino",
          "--generate-notes",
          "--notes", f"Migrated from upstream sqlite/sqlite {tag}: https://github.com/sqlite/sqlite/releases/tag/{tag}"])
     print(f"    release {release_tag} created")
+
+
+# --- step 5 ----------------------------------------------------------------
+
+def sync_main_with_origin() -> None:
+    step(f"5. Set upstream of {MAIN_BRANCH} to origin/{MAIN_BRANCH} and get the latest changes")
+    if not is_git_repo(LIB_ROOT) or not run(["git", "remote"]).stdout.strip():
+        print("    no git repository or remote: nothing to sync")
+        return
+    run(["git", "checkout", MAIN_BRANCH])
+    run(["git", "fetch", "origin", MAIN_BRANCH])
+    run(["git", "branch", f"--set-upstream-to=origin/{MAIN_BRANCH}", MAIN_BRANCH])
+    run(["git", "pull", "--ff-only"])
+    print(f"    {MAIN_BRANCH} tracks origin/{MAIN_BRANCH} and is up to date")
 
 
 def main() -> int:
@@ -184,6 +207,7 @@ def main() -> int:
         verify_arduino_builds()
         if args.publish:
             publish(version, tag)
+            sync_main_with_origin()
         else:
             print(f"\nDry run complete: SQLite {version} migrated and verified.")
             print("Re-run with --publish to commit, tag v" + version + " and create the GitHub release.")
