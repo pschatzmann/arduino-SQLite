@@ -148,10 +148,10 @@ extern "C" {
 */
 #define SQLITE_VERSION        "3.55.0"
 #define SQLITE_VERSION_NUMBER 3055000
-#define SQLITE_SOURCE_ID      "2026-11-09 00:59:11 1fea2d9c18fc5f84b1c98a3aa95895a67851a3fbc901144e7ebba05408e2eb47"
+#define SQLITE_SOURCE_ID      "2026-11-16 12:18:53 447a681116cc5e2650a884322f0a8e6efa620c5b13aaa8cf0d4655357e726545"
 #define SQLITE_SCM_BRANCH     "trunk"
 #define SQLITE_SCM_TAGS       ""
-#define SQLITE_SCM_DATETIME   "2026-11-09T00:59:11.143Z"
+#define SQLITE_SCM_DATETIME   "2026-11-16T12:18:53.791Z"
 
 /*
 ** CAPI3REF: Run-Time Library Version Numbers
@@ -476,6 +476,7 @@ SQLITE_API int sqlite3_exec(
 #define SQLITE_NOTADB      26   /* File opened that is not a database file */
 #define SQLITE_NOTICE      27   /* Notifications from sqlite3_log() */
 #define SQLITE_WARNING     28   /* Warnings from sqlite3_log() */
+#define SQLITE_MOVED       29   /* Internal use only:  Cursor moved */
 #define SQLITE_ROW         100  /* sqlite3_step() has another row ready */
 #define SQLITE_DONE        101  /* sqlite3_step() has finished executing */
 /* end-of-error-codes */
@@ -5566,7 +5567,7 @@ SQLITE_API int sqlite3_data_count(sqlite3_stmt *pStmt);
 ** <tr><td> INTEGER  <td>   BLOB    <td> Same as INTEGER->TEXT
 ** <tr><td>  FLOAT   <td> INTEGER   <td> [CAST] to INTEGER
 ** <tr><td>  FLOAT   <td>   TEXT    <td> ASCII rendering of the float
-** <tr><td>  FLOAT   <td>   BLOB    <td> [CAST] to BLOB
+** <tr><td>  FLOAT   <td>   BLOB    <td> Same as FLOAT->TEXT
 ** <tr><td>  TEXT    <td> INTEGER   <td> [CAST] to INTEGER
 ** <tr><td>  TEXT    <td>  FLOAT    <td> [CAST] to REAL
 ** <tr><td>  TEXT    <td>   BLOB    <td> No change
